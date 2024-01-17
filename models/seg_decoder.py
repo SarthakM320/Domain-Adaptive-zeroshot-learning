@@ -212,11 +212,7 @@ class SegDecoder(nn.Module):
         size = maps_size[-1]
 
         for i_attn, attn in enumerate(attns):
-            if True:
-                outputs_seg_masks.append(F.interpolate(attn, size=size, mode='bilinear', align_corners=False))
-            else:
-                outputs_seg_masks.append(outputs_seg_masks[i_attn - 1] +
-                                         F.interpolate(attn, size=size, mode='bilinear', align_corners=False))
+            outputs_seg_masks.append(F.interpolate(attn, size=size, mode='bilinear', align_corners=False))
 
         pred = F.interpolate(outputs_seg_masks[-1],
                                           size=(self.image_size, self.image_size),
