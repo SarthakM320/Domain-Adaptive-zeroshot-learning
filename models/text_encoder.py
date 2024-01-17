@@ -1,7 +1,7 @@
 import torch
 import clip
 import torch.nn as nn
-from utils_own import freeze_stages
+from models.utils_own import freeze_stages
 
 
 

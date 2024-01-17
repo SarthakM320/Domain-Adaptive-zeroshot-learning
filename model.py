@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import TransformerDecoder, TransformerDecoderLayer
 from typing import Optional
-from utils_own import freeze_stages, trunc_normal_init, constant_init
+from models.utils_own import freeze_stages, trunc_normal_init, constant_init
 from mmseg.models.decode_heads.decode_head import BaseDecodeHead
 from timm.models.layers import trunc_normal_
 import math
