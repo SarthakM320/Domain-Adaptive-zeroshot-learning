@@ -1,6 +1,4 @@
-from img_encoder import CLIPViT, CLIPResnet
-from models.utils_own import freeze_stages
-from text_encoder import CLIPTextEncoder
+from models.utils_own import freeze_stages, stylize
 import torch
 from torch import nn
 from clip import tokenize
@@ -13,7 +11,8 @@ class Model(nn.Module):
         self, 
         image_encoder, 
         text_encoder, 
-        clip_resnet, 
+        clip_resnet,
+        unet_decoder, 
         decode_head,
         class_names,
         base_class,
@@ -28,6 +27,7 @@ class Model(nn.Module):
         self.text_encoder = text_encoder
         self.clip_resnet = clip_resnet
         self.decode_head = decode_head
+        self.unet_decoder = unet_decoder
         self.class_names = class_names
         self.gpu_id = gpu_id
         self.base_class = np.asarray(base_class)
@@ -44,9 +44,23 @@ class Model(nn.Module):
         
 
 
+    def forward(self, image_b1, image_b2):
+        b1_resnet_features = self.clip_resnet.get_features(image_b1)
+        b2_resnet_features = self.clip_resnet.get_features(image_b2)
+        b1_stylized = stylize(b1_resnet_features, b2_resnet_features)
+        
+        # pass b1_stylized to unet_decoder
+        # which feature map to get from the middle
+        b1_seg = self.unet_decoder(b1_stylized)
 
-    def forward(self):
-        pass
+        text_features = self.get_text_embeddings(self.texts)
+        #which image to pass b1 or b2
+        image_features = self.get_image_features(image_b1, model = 'vit')
+
+
+
+
+
 
     def get_image_features(self, images, model='resnet'):
         if model == 'resnet':

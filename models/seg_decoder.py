@@ -114,7 +114,7 @@ class SegDecoder(nn.Module):
             crop_train=False,
             **kwargs
     ):
-        super().__init__()
+        super().__init__(**kwargs)
         self.in_channels = in_channels
         self.image_size = img_size
         self.use_stages = use_stages
@@ -123,6 +123,7 @@ class SegDecoder(nn.Module):
         self.all_idx = all_idx
         self.num_heads = num_heads
         self.embed_dim = embed_dims
+        self.num_classes = num_classes
         input_proj = []
         proj_norm = []
         decoders = []
@@ -229,7 +230,8 @@ class SegDecoder(nn.Module):
         #         out["pred"] = self.semantic_inference(out["pred_masks"], self.seen_idx) #(bs, 20, 224, 224)
         #     else:
         #         out["pred"] = self.semantic_inference(out["pred_masks"], self.seen_idx, 0.1)
-        #     return out["pred"]                  
+        #     return out["pred"] 
+                         
         return out
 
 

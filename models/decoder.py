@@ -61,9 +61,10 @@ class OutConv(nn.Module):
         return self.conv(x)
     
 class Decoder(nn.Module):
-    def __init__(self, num_classes, bilinear=True):
+    def __init__(self, output_resolution, num_classes, bilinear=True):
         super().__init__()
         self.num_classes = num_classes
+        self.output_resolution = output_resolution
         factor = 2 if bilinear else 1
         self.up1 = (Up(2048, 1024, bilinear))
         self.up2 = (Up(2048, 512, bilinear))
