@@ -31,7 +31,10 @@ class CLIPTextEncoder(nn.Module):
         self.positional_embedding = nn.Parameter(torch.empty(self.context_length, transformer_width))
         self.ln_final = LayerNorm(transformer_width)
         self.text_projection = nn.Parameter(torch.empty(transformer_width, embed_dim))
-    
+
+        if self.pretrained:
+            self.init_weights()
+
     def init_weights(self, pretrained=None):
         pretrained = pretrained or self.pretrained
         if isinstance(pretrained, str):

@@ -29,6 +29,9 @@ class CLIPVisionTransformer(nn.Module):
         embed_dim = width
         self.patch_size = patch_size
 
+        if self.pretrained:
+            self.init_weights()
+
     def init_weights(self, pretrained=None):
         pretrained = pretrained or self.pretrained
         if isinstance(pretrained, str):

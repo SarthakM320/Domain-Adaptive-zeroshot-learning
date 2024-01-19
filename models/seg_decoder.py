@@ -7,10 +7,8 @@ import torch.nn.functional as F
 from torch.nn import TransformerDecoder, TransformerDecoderLayer
 from typing import Optional
 from models.utils_own import freeze_stages, trunc_normal_init, constant_init
-from mmseg.models.decode_heads.decode_head import BaseDecodeHead
 from timm.models.layers import trunc_normal_
 import math
-from mmseg.models.losses import accuracy
 
 
 class TPN_Decoder(TransformerDecoder):
@@ -128,9 +126,9 @@ class SegDecoder(nn.Module):
         proj_norm = []
         decoders = []
 
-        self.unseen_idx = self.all_idx.copy()
-        for i_idx in self.seen_idx:
-            self.unseen_idx.remove(i_idx)
+        # self.unseen_idx = self.all_idx.copy()
+        # for i_idx in self.seen_idx:
+        #     self.unseen_idx.remove(i_idx)
         
         for i in range(self.use_stages):
             if use_proj:

@@ -5,22 +5,23 @@ lr: 0.001
 optim: Adam
 num_classes: 10
 img_size: 512
+seed: 16
 use_gpu: True
 
 text_encoder:
   freeze: True
-  pretrained: pretrained_weights\ViT-B-16.pt
+  pretrained: ViT-B-16.pt
   context_length: 77
   vocab_size: 49408
   transformer_width: 512
   transformer_layers: 12
   transformer_heads: 8
-  embed_dim: 1024
+  embed_dim: 512
 
 Resnet:
   model_type: RN50
   freeze: True
-  pretrained: pretrained_weights\RN50.pt
+  pretrained: RN50.pt
   layers: [3, 4, 6, 3]
   output_dim: 1024
   heads: 8
@@ -29,13 +30,13 @@ Resnet:
 VIT:
   model_type: ViT-B/16
   freeze: True
-  pretrained: pretrained_weights\ViT-B-16.pt
+  pretrained: ViT-B-16.pt
   patch_size: 16
   width: 768
   layers: 12
   heads: 12
   output_dim: 512
-  dop_path_rate: 0.1
+  drop_path_rate: 0.1
   out_indices: [11]
   get_embeddings: True
 
@@ -49,3 +50,4 @@ SegDecoder:
 
 Decoder:
   output_resolution: 512
+  bilinear: True

@@ -7,10 +7,9 @@ import torch.nn.functional as F
 from torch.nn import TransformerDecoder, TransformerDecoderLayer
 from typing import Optional
 from models.utils_own import *
-from mmseg.models.decode_heads.decode_head import BaseDecodeHead
 from timm.models.layers import trunc_normal_
 import math
-from mmseg.models.losses import accuracy
+
 
 class CLIPResNet(nn.Module):
     """
@@ -48,6 +47,9 @@ class CLIPResNet(nn.Module):
 
         self.embed_dim = width * 32  # the ResNet feature dimension
         self.attnpool = AttentionPool2d(input_resolution // 32, self.embed_dim, heads, output_dim)
+
+        if self.pretrained:
+            self.init_weights()
 
     def _make_layer(self, planes, blocks, stride=1):
         layers = [Bottleneck(self._inplanes, planes, stride)]
