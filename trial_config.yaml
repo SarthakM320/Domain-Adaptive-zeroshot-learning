@@ -8,6 +8,7 @@ img_size: 512
 seed: 16
 use_gpu: False
 kaggle: True
+mac: True
 
 text_encoder:
   freeze: True

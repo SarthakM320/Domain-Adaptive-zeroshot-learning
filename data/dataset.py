@@ -4,14 +4,14 @@ from torch.utils.data import Dataset
 import pandas as pd
 from PIL import Image
 
-cityscapes_train = torchvision.datasets.Cityscapes(
-                            root = 'cityscapes_dataset',
-                            split='train', 
-                            mode = 'fine', 
-                            target_type = 'semantic',
-                            transform=transforms_cityscape, 
-                            target_transform=target_transforms_cityscape
-                        )
+# cityscapes_train = torchvision.datasets.Cityscapes(
+#                             root = 'cityscapes_dataset',
+#                             split='train', 
+#                             mode = 'fine', 
+#                             target_type = 'semantic',
+#                             transform=transforms_cityscape, 
+#                             target_transform=target_transforms_cityscape
+#                         )
 
 # cityscapes_val = torchvision.datasets.Cityscapes(
 #                             root = 'cityscapes_dataset',

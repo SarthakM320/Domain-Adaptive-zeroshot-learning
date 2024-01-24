@@ -46,7 +46,8 @@ def main(args):
         gpu_id = -1
         device = 'cpu'
 
-    device = 'mps'
+    if args['mac'] and not args['kaggle']:
+        device = 'mps'
 
 
     seed = args['seed']

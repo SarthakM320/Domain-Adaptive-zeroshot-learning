@@ -1,3 +1,6 @@
 Experiments
 pretrained_weights
 cityscapes_dataset
+RN101.pt
+RN50.pt
+ViT-B-16.pt
