@@ -46,7 +46,7 @@ class CLIPVisionTransformer(nn.Module):
 
             if 'positional_embedding' in state_dict.keys():
                 if self.positional_embedding.shape != state_dict['positional_embedding'].shape:
-                    # (1025, 768)                      (197, 768)   upsample the positional_embedding for larger input
+                    # (1025, 768) -> (197, 768)   upsample the positional_embedding for larger input
                     print(f'Resize the pos_embed shape from {state_dict["positional_embedding"].shape} to {self.positional_embedding.shape}')
                     cls_pos = state_dict["positional_embedding"][0:1, :]
                     if self.patch_size == 16:
@@ -97,7 +97,6 @@ class CLIPVisionTransformer(nn.Module):
             global_embedding = x[:, 0]
             visual_embedding = x[:, 1:].reshape(B, H, W, -1).permute(0, 3, 1, 2)
 
-            print(len(self.out_indices))
             if len(self.out_indices) == 1:
                 visual_embedding = visual_embedding / visual_embedding.norm(dim=1, keepdim=True)
                 features.append(visual_embedding)

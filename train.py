@@ -46,12 +46,15 @@ def main(args):
         gpu_id = -1
         device = 'cpu'
 
+    device = 'mps'
+
 
     seed = args['seed']
     set_seed(seed)
 
-    train_dataset = dataset('dataset/cityscape_train.csv')
-    val_dataset = dataset('dataset/cityscape_val.csv')
+    
+    train_dataset = dataset('dataset/cityscape_train.csv', kaggle = args['kaggle'])
+    val_dataset = dataset('dataset/cityscape_val.csv', kaggle = args['kaggle'])
 
     if gpu_id == -1:
         train_sampler = DistributedSampler(train_dataset)
