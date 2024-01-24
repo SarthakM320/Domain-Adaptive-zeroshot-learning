@@ -11,7 +11,7 @@ kaggle: True
 
 text_encoder:
   freeze: True
-  pretrained: pretrained_weights\ViT-B-16.pt
+  pretrained: ViT-B-16.pt
   context_length: 77
   vocab_size: 49408
   transformer_width: 512
@@ -22,7 +22,7 @@ text_encoder:
 Resnet:
   model_type: RN50
   freeze: True
-  pretrained: pretrained_weights\RN50.pt
+  pretrained: RN50.pt
   layers: [3, 4, 6, 3]
   output_dim: 1024
   heads: 8
@@ -31,7 +31,7 @@ Resnet:
 VIT:
   model_type: ViT-B/16
   freeze: True
-  pretrained: pretrained_weights\ViT-B-16.pt
+  pretrained: ViT-B-16.pt
   patch_size: 16
   width: 768
   layers: 12
