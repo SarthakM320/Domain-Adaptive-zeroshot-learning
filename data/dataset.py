@@ -3,7 +3,8 @@ import torchvision
 from torch.utils.data import Dataset
 import pandas as pd
 from PIL import Image
-
+from data import labels
+import torch
 # cityscapes_train = torchvision.datasets.Cityscapes(
 #                             root = 'cityscapes_dataset',
 #                             split='train', 
@@ -52,18 +53,31 @@ class dataset(Dataset):
         self.gts = csv['target'].values
         self.transforms = transforms
         self.target_transforms = target_transforms
+        self.color_mapping = {label.color:label.id for label in labels.labels}
 
     def __len__(self):
         return len(self.images)
     
     def __getitem__(self, idx):
         if not self.kaggle:
-            image = self.transforms(Image.open(self.images[idx]))
-            foggy_image = self.transforms(Image.open(self.foggy_images[idx]))
-            gt = self.target_transforms(Image.open(self.gts[idx]))
+            image = self.transforms(Image.open(self.images[idx].replace('\\','/')))
+            foggy_image = self.transforms(Image.open(self.foggy_images[idx].replace('\\','/')))
+            gt = self.target_transforms(Image.open(self.gts[idx].replace('\\','/')))[:3]
         else:
-            image = self.transforms('/kaggle/input/cityscapes-dataset/'+Image.open(self.images[idx]))
-            foggy_image = self.transforms('/kaggle/input/cityscapes-dataset/'+Image.open(self.foggy_images[idx]))
-            gt = self.target_transforms('/kaggle/input/cityscapes-dataset/'+Image.open(self.gts[idx]))
+            image = self.transforms('/kaggle/input/cityscapes-dataset/'+Image.open(self.images[idx].replace('\\','/')))
+            foggy_image = self.transforms('/kaggle/input/cityscapes-dataset/'+Image.open(self.foggy_images[idx].replace('\\','/')))
+            gt = self.target_transforms('/kaggle/input/cityscapes-dataset/'+Image.open(self.gts[idx].replace('\\','/')))[:3]
 
-        return image, foggy_image, gt
+        gt_255 = (gt*255).to(torch.int)
+        x = torch.zeros(34,512,512)
+        for i in range(gt.shape[1]):
+            for j in range(gt.shape[1]):
+                try:
+                    color = tuple(gt_255[:,i,j].numpy())
+                    id = self.color_mapping[color]
+                    x[id,i,j] = 255
+                except:
+                    x[0,i,j] = 255
+
+
+        return image, foggy_image, x

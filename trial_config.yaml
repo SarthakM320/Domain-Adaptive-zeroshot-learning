@@ -6,8 +6,8 @@ optim: Adam
 num_classes: 10
 img_size: 512
 seed: 16
-use_gpu: False
-kaggle: True
+use_gpu: True
+kaggle: False
 mac: True
 
 text_encoder:
