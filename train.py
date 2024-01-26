@@ -181,20 +181,20 @@ def main(args):
             # what should the threshold be
             # loss = loss_bce(b1_seg, seg['pred_masks']) + loss_bce(seg['pred_masks'], gt)
             loss = loss_bce(seg['pred_masks'], gt)
-
+            
 
             optim.zero_grad()
             loss.backward()
             optim.step()
 
-            b1_seg = (b1_seg>args['threshold']).int()
-            seg['pred_masks'] = (seg['pred_masks']>args['threshold']).int()
-            iou, _ = intersection_over_union(seg['pred_masks'], gt.int())
-            prec, _, recall, _ = precision_and_recall(seg['pred_masks'], gt.int())
-            dice,_ = dice_score(seg['pred_masks'], gt.int())
+            # b1_seg = (b1_seg>args['threshold']).int()
+            # seg['pred_masks'] = (seg['pred_masks']>args['threshold']).int()
+            iou, _ = intersection_over_union((seg['pred_masks']>args['threshold']).int(), gt.int())
+            prec, _, recall, _ = precision_and_recall((seg['pred_masks']>args['threshold']).int(), gt.int())
+            dice,_ = dice_score((seg['pred_masks']>args['threshold']).int(), gt.int())
 
             if idx%10 == 0:
-
+                print(loss_bce(b1_seg, seg['pred_masks']))
                 print(f'PRECISION: {prec}')
                 print(f'RECALL: {recall}')
                 print(f'IOU: {iou}')

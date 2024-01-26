@@ -9,7 +9,6 @@ from typing import Optional
 from models.utils_own import freeze_stages, trunc_normal_init, constant_init
 from timm.models.layers import trunc_normal_
 import math
-from mmseg.models.decode_heads.decode_head import BaseDecodeHead
 
 class TPN_Decoder(TransformerDecoder):
     def forward(self, tgt: Tensor, memory: Tensor, tgt_mask: Optional[Tensor] = None,
