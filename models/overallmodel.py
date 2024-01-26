@@ -66,7 +66,6 @@ class OverallModel(nn.Module):
 
         b1_seg = F.sigmoid(b1_seg)
         seg['pred_masks'] = F.sigmoid(seg['pred_masks'])
-        
         return b1_seg, b1_l, feature_l, seg
 
 

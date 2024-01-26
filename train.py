@@ -48,7 +48,7 @@ def main(args):
 
     if args['mac'] and not args['kaggle']:
         device = 'mps'
-        gpu_id = -2
+        gpu_id = 0
 
 
     seed = args['seed']
@@ -71,7 +71,7 @@ def main(args):
         kaggle = args['kaggle']
     )
 
-    if args['use_gpu'] and not args['mac']:
+    if args['use_gpu']:
         train_sampler = DistributedSampler(train_dataset)
         val_sampler = DistributedSampler(val_dataset)
     else:
@@ -171,7 +171,7 @@ def main(args):
     cos = nn.CosineSimilarity(dim = -1)
 
     if args['use_gpu']:
-        model = DDP(model.to(device), device_ids = [gpu_id], find_unused_parameters=True)
+        model = DDP(model.to(device), device_ids = [device], find_unused_parameters=True)
     model.to(device)
 
     # b1_seg, b1_l, feature_l, seg = model(torch.randn(1,3,512,512).to(device),torch.randn(1,3,512,512).to(device))
@@ -190,6 +190,7 @@ def main(args):
 
             b1_seg, b1_l, feature_l, seg = model(b1, b2)
             # what should the threshold be
+            
             loss_cos = (1-cos(b1_l.flatten(-2), feature_l.flatten(-2))).mean()*args['cos_loss_weight']
             loss_b1_seg = loss_bce(b1_seg, seg['pred_masks'])*args['b1_seg_loss_weight']
             loss_seg = loss_bce(seg['pred_masks'], gt)*args['seg_loss_weight']
@@ -208,6 +209,7 @@ def main(args):
             dice, dice_per_class = dice_score((seg['pred_masks']>args['threshold']).int().detach().cpu(), gt.int().detach().cpu())
             
             if idx%2 == 0 and gpu_id == 0:
+                writer.add_scalar('Overall Loss/train', loss.item(), step_train)
                 writer.add_scalar('Loss_cos/train', loss_cos.item(), step_train)
                 writer.add_scalar('Loss_b1_seg/train', loss_b1_seg.item(), step_train)
                 writer.add_scalar('Loss_seg/train', loss_seg.item(), step_train)
@@ -216,15 +218,14 @@ def main(args):
                 writer.add_scalar('Mean Recall/train', recall.item(), step_train)
                 writer.add_scalar('Mean Dice/train', dice.item(), step_train)
 
-                for i in range(len(iou_per_class)):
-                    writer.add_scalar(f'IOU_train/{i}', iou_per_class[i].item(), step_train)
-                    writer.add_scalar(f'Precision_train/{i}', precision_per_class[i].item(), step_train)
-                    writer.add_scalar(f'Recall_train/{i}', recall_per_class[i].item(), step_train)
-                    writer.add_scalar(f'Dice_train/{i}', dice_per_class[i].item(), step_train)
+                for i in range(len(class_names)):
+                    writer.add_scalar(f'IOU_train/{i}', iou_per_class[: i].mean().item(), step_train)
+                    writer.add_scalar(f'Precision_train/{i}', precision_per_class[: i].mean().item(), step_train)
+                    writer.add_scalar(f'Recall_train/{i}', recall_per_class[: i].mean().item(), step_train)
+                    writer.add_scalar(f'Dice_train/{i}', dice_per_class[: i].mean().item(), step_train)
 
 
             if idx%10 == 0:
-                print(loss_bce(b1_seg.detach().cpu(), seg['pred_masks'].detach().cpu()))
                 print(f'PRECISION: {prec}')
                 print(f'RECALL: {recall}')
                 print(f'IOU: {iou}')
@@ -252,6 +253,7 @@ def main(args):
                 dice, dice_per_class = dice_score((seg['pred_masks']>args['threshold']).int().detach().cpu(), gt.int().detach().cpu())
                 
                 if idx%2 == 0 and gpu_id == 0:
+                    writer.add_scalar('Overall Loss/val', loss.item(), step_val)
                     writer.add_scalar('Loss_cos/val', loss_cos.item(), step_val)
                     writer.add_scalar('Loss_b1_seg/val', loss_b1_seg.item(), step_val)
                     writer.add_scalar('Loss_seg/val', loss_seg.item(), step_val)
@@ -260,14 +262,13 @@ def main(args):
                     writer.add_scalar('Mean Recall/val', recall.item(), step_val)
                     writer.add_scalar('Mean Dice/val', dice.item(), step_val)
 
-                    for i in range(len(iou_per_class)):
-                        writer.add_scalar(f'IOU_val/{i}', iou_per_class[i].item(), step_val)
-                        writer.add_scalar(f'Precision_val/{i}', precision_per_class[i].item(), step_val)
-                        writer.add_scalar(f'Recall_val/{i}', recall_per_class[i].item(), step_val)
-                        writer.add_scalar(f'Dice_val/{i}', dice_per_class[i].item(), step_val)
+                    for i in range(len(class_names)):
+                        writer.add_scalar(f'IOU_val/{i}', iou_per_class[: i].mean().item(), step_val)
+                        writer.add_scalar(f'Precision_val/{i}', precision_per_class[: i].mean().item(), step_val)
+                        writer.add_scalar(f'Recall_val/{i}', recall_per_class[: i].mean().item(), step_val)
+                        writer.add_scalar(f'Dice_val/{i}', dice_per_class[: i].mean().item(), step_val)
 
                 if idx%10 == 0:
-                    print(loss_bce(b1_seg.detach().cpu(), seg['pred_masks'].detach().cpu()))
                     print(f'PRECISION: {prec}')
                     print(f'RECALL: {recall}')
                     print(f'IOU: {iou}')
@@ -277,10 +278,6 @@ def main(args):
 
             
             step_val += 1
-
-
-            
-
 
 
 

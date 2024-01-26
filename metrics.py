@@ -21,4 +21,4 @@ def dice_score(pred, label, eps = 1e-6):
     intersect = (pred & label).float().sum((2,3))
     sum = pred.sum((2,3)) + label.sum((2,3))
     dice = (2*intersect+eps)/(sum+eps)
-    return dice.mean(), dice
+    return dice.mean(), dice[0]
