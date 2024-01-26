@@ -81,7 +81,7 @@ class dataset(Dataset):
             foggy_image = self.transforms(Image.open(self.foggy_images[idx].replace('\\','/')))
             gt = self.target_transforms(Image.open(self.gts[idx].replace('\\','/')))[:3]
         else:
-            image = self.transforms(+Image.open('/kaggle/input/cityscapes-dataset/'+self.images[idx].replace('\\','/')))
+            image = self.transforms(Image.open('/kaggle/input/cityscapes-dataset/'+self.images[idx].replace('\\','/')))
             foggy_image = self.transforms(Image.open('/kaggle/input/cityscapes-dataset/'+self.foggy_images[idx].replace('\\','/')))
             gt = self.target_transforms(Image.open('/kaggle/input/cityscapes-dataset/'+self.gts[idx].replace('\\','/')))[:3]
 
