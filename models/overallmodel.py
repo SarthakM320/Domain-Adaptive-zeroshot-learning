@@ -4,7 +4,7 @@ from clip import tokenize
 import numpy as np
 from torch.nn import functional as F
 from models import *
-
+from os.path import join
 
 class OverallModel(nn.Module):
     def __init__(
@@ -67,6 +67,40 @@ class OverallModel(nn.Module):
         b1_seg = F.sigmoid(b1_seg)
         seg['pred_masks'] = F.sigmoid(seg['pred_masks'])
         return b1_seg, b1_l, feature_l, seg
+
+    def forward_test(self, image_b2):
+        b,c,h,w = image_b2.shape
+        b2_resnet_features = self.clip_resnet.get_features(image_b2)
+        b2_seg, b2_l = self.unet_decoder(b2_resnet_features)
+
+        image_features = self.get_image_features(image_b2, model = 'vit')
+        feature_l = self.conv(image_features[0][0].reshape(b,c,h,w))
+        seg = self.decode_head([image_features, text_features])
+
+
+    def save_model(self, path, epoch,latest = True):
+        ckpt = {
+            'epoch':epoch, 
+            'unet_decoder':self.unet_decoder.state_dict(),
+            'seg_decoder':self.decode_head.state_dict(),
+        }
+        if latest:
+            torch.save(ckpt, join(path, 'latest.pth'))
+        else:
+            torch.save(ckpt, join(path, 'best.pth'))
+
+    def load_model(self, path, latest = True):
+        if latest:
+            ckpt = torch.load(join(path, 'latest.pth'))
+        else:
+            ckpt = torch.load(join(path, 'best.pth'))
+
+        self.unet_decoder.load_state_dict(ckpt['unet_decoder'])
+        self.decode_head.load_state_dict(ckpt['seg_decoder'])
+
+        return ckpt['epoch']
+        
+
 
 
     def get_image_features(self, images, model='resnet'):
