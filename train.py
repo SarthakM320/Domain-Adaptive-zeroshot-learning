@@ -85,6 +85,12 @@ def main(args):
         writer = SummaryWriter(exp)
         with open(f'{exp}/params.json', 'w') as f:
             json.dump(args, f)
+    
+    if gpu_id != 0:
+        def print_pass(*args):
+            pass
+
+        builtins.print = print_pass
 
     num_epochs = args['num_epochs']
 
