@@ -228,7 +228,7 @@ def main(args):
                 writer.add_scalar('Mean Recall B1 seg/train', recall_b1_seg.item(), step_train)
                 writer.add_scalar('Mean Dice B1 seg/train', dice_b1_seg.item(), step_train)
 
-                for i in range(len(class_names)):
+                for i in range(1,len(class_names)):
                     writer.add_scalar(f'IOU_train/{i}', iou_per_class[: i].mean().item(), step_train)
                     writer.add_scalar(f'Precision_train/{i}', precision_per_class[: i].mean().item(), step_train)
                     writer.add_scalar(f'Recall_train/{i}', recall_per_class[: i].mean().item(), step_train)
@@ -292,7 +292,7 @@ def main(args):
                     writer.add_scalar('Mean Recall B1 seg/val', recall_b1_seg.item(), step_val)
                     writer.add_scalar('Mean Dice B1 seg/val', dice_b1_seg.item(), step_val)
 
-                    for i in range(len(class_names)):
+                    for i in range(1,len(class_names)):
                         writer.add_scalar(f'IOU_val/{i}', iou_per_class[: i].mean().item(), step_val)
                         writer.add_scalar(f'Precision_val/{i}', precision_per_class[: i].mean().item(), step_val)
                         writer.add_scalar(f'Recall_val/{i}', recall_per_class[: i].mean().item(), step_val)
