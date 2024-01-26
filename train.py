@@ -18,8 +18,8 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
 import os
 import yaml
-from data import dataset
-
+from data import dataset, labels
+from metrics import dice_score, precision_and_recall, intersection_over_union
 
 warnings.filterwarnings('ignore')
 
@@ -48,22 +48,36 @@ def main(args):
 
     if args['mac'] and not args['kaggle']:
         device = 'mps'
+        gpu_id = -2
 
 
     seed = args['seed']
     set_seed(seed)
 
-    
-    train_dataset = dataset('dataset/cityscape_train.csv', kaggle = args['kaggle'])
-    val_dataset = dataset('dataset/cityscape_val.csv', kaggle = args['kaggle'])
+    print(device)
 
-    if gpu_id == -1:
+    color_mapping = {label.color:label.id for label in labels}
+    
+    train_dataset = dataset(
+        'dataset/cityscape_train.csv', 
+        image_size = args['img_size'],
+        color_mapping=color_mapping,
+        kaggle = args['kaggle']
+    )
+    val_dataset = dataset(
+        'dataset/cityscape_val.csv', 
+        image_size = args['img_size'] ,  
+        color_mapping=color_mapping, 
+        kaggle = args['kaggle']
+    )
+
+    if args['use_gpu'] and not args['mac']:
         train_sampler = DistributedSampler(train_dataset)
         val_sampler = DistributedSampler(val_dataset)
     else:
         train_sampler = val_sampler = None
 
-    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=train_sampler is None, sampler=train_sampler)
+    train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=train_sampler is None, sampler=train_sampler)
     val_dataloader = DataLoader(val_dataset, batch_size=8, shuffle=val_sampler is None, sampler = val_sampler)
 
     exp=f'{args["folder"]}/'+args['exp_name']
@@ -128,22 +142,63 @@ def main(args):
         args['SegDecoder']['use_proj']
     )
 
+    class_names = ['void']
+    for label in labels:
+        if not label.id == 0:
+            class_names.append(label.name)
+
+    
     model = OverallModel(
         image_encoder = models['image_encoder'],
         text_encoder = models['text_encoder'],
         clip_resnet = models['resnet'],
         unet_decoder = models['decoder'],
         decode_head = models['seg_decoder'],
-        class_names=[],
+        class_names=class_names,
         base_class = [],
         novel_class = [],
         both_class = [],
-        gpu_id = gpu_id
+        device = device
     )
 
-    model = DDP(model.to(device), device_ids = [gpu_id])
+    loss_bce = nn.BCELoss()
 
-    model(torch.randn(1,3,512,512).to(gpu_id),torch.randn(1,3,512,512).to(gpu_id))
+    # if args['use_gpu']:
+    #     model = DDP(model.to(device), device_ids = [gpu_id])
+    model.to(device)
+
+    # b1_seg, b1_l, feature_l, seg = model(torch.randn(1,3,512,512).to(device),torch.randn(1,3,512,512).to(device))
+
+    optim = torch.optim.Adam(model.parameters(), lr = args['lr'])
+
+    for epoch in range(num_epochs):
+        for idx, (b1,b2,gt) in enumerate(tqdm(train_dataloader)):
+            b1 = b1.to(device)
+            b2 = b2.to(device)
+            gt = gt.to(device)
+
+            b1_seg, b1_l, feature_l, seg = model(b1, b2)
+            # what should the threshold be
+            # loss = loss_bce(b1_seg, seg['pred_masks']) + loss_bce(seg['pred_masks'], gt)
+            loss = loss_bce(seg['pred_masks'], gt)
+
+
+            optim.zero_grad()
+            loss.backward()
+            optim.step()
+
+            b1_seg = (b1_seg>args['threshold']).int()
+            seg['pred_masks'] = (seg['pred_masks']>args['threshold']).int()
+            iou, _ = intersection_over_union(seg['pred_masks'], gt.int())
+            prec, _, recall, _ = precision_and_recall(seg['pred_masks'], gt.int())
+            dice = dice_score(seg['pred_masks'], gt.int())
+
+            print(f'PRECISION: {prec}')
+            print(f'RECALL: {recall}')
+            print(f'IOU: {iou}')
+            print(f'DICE SCORE: {dice}')
+
+            print(f'LOSS: {loss}')
 
 
 

@@ -34,6 +34,7 @@ class CLIPTextEncoder(nn.Module):
 
         if self.pretrained:
             self.init_weights()
+            freeze_stages(self)
 
     def init_weights(self, pretrained=None):
         pretrained = pretrained or self.pretrained

@@ -9,7 +9,7 @@ from typing import Optional
 from models.utils_own import freeze_stages, trunc_normal_init, constant_init
 from timm.models.layers import trunc_normal_
 import math
-
+from mmseg.models.decode_heads.decode_head import BaseDecodeHead
 
 class TPN_Decoder(TransformerDecoder):
     def forward(self, tgt: Tensor, memory: Tensor, tgt_mask: Optional[Tensor] = None,
@@ -42,7 +42,6 @@ class TPN_DecoderLayer(TransformerDecoderLayer):
                 tgt_key_padding_mask: Optional[Tensor] = None,
                 memory_key_padding_mask: Optional[Tensor] = None) -> Tensor:
         
-
         tgt2, attn2 = self.multihead_attn(
             tgt.transpose(0, 1), memory.transpose(0, 1), memory.transpose(0, 1))
         tgt = tgt + self.dropout2(tgt2)
@@ -112,7 +111,8 @@ class SegDecoder(nn.Module):
             crop_train=False,
             **kwargs
     ):
-        super().__init__(**kwargs)
+        # super().__init__(in_channels = in_channels, num_classes=num_classes, channels = num_classes, **kwargs)
+        super().__init__()
         self.in_channels = in_channels
         self.image_size = img_size
         self.use_stages = use_stages
@@ -158,10 +158,12 @@ class SegDecoder(nn.Module):
         self.input_proj = input_proj
         self.proj_norm = proj_norm
         self.decoder = decoders
-        self.q_proj = nn.Linear(embed_dims * 2, embed_dims)
+        self.q_proj = nn.Linear(embed_dims, embed_dims)
+        self.conv_seg = nn.Conv2d(2, self.num_classes, kernel_size=1) 
 
     def forward(self, inputs_both):
-        inputs = inputs_both[0][0]
+        inputs = list(inputs_both[0][0])
+        inputs.reverse()
         cls_token = inputs_both[0][1]
         text_token = inputs_both[1]
         
@@ -170,12 +172,13 @@ class SegDecoder(nn.Module):
             x.append(self.d4_to_d3(stage_) if stage_.dim() > 3 else stage_)
         x.reverse()
         bs = x[0].size()[0]
-
+        
         laterals = []
         attns = []
         maps_size = []
         qs = []
 
+        
         for idx, (x_, proj_, norm_) in enumerate(zip(x, self.input_proj, self.proj_norm)):
             lateral = norm_(proj_(x_))
             if idx == 0:
@@ -191,6 +194,7 @@ class SegDecoder(nn.Module):
                     laterals.append(l_ + lateral)
 
         lateral = laterals[-1]
+        
 
         # q = self.get_qs(text_token, cls_token)
         # q = self.q_proj(q)
@@ -198,6 +202,7 @@ class SegDecoder(nn.Module):
         b, _ = cls_token.shape
         q = text_token.expand(b, -1, -1)
         q = q.transpose(0,1)
+        q = self.q_proj(q)
         for idx, decoder_ in enumerate(self.decoder):
             q_, attn_ = decoder_(q, lateral.transpose(0, 1))
             for q, attn in zip(q_, attn_):
@@ -210,15 +215,17 @@ class SegDecoder(nn.Module):
 
         outputs_seg_masks = []
         size = maps_size[-1]
-
         for i_attn, attn in enumerate(attns):
             outputs_seg_masks.append(F.interpolate(attn, size=size, mode='bilinear', align_corners=False))
 
+        # print(len(outputs_seg_masks))
+        # for i in outputs_seg_masks:
+        #     print(i.shape)
         pred = F.interpolate(outputs_seg_masks[-1],
                                           size=(self.image_size, self.image_size),
                                           mode='bilinear', align_corners=False)
-                                          
-        print(pred.shape)
+                                                  
+        # print(pred.shape)
         out = {"pred_masks": pred}
 
         # if self.training:
@@ -229,7 +236,7 @@ class SegDecoder(nn.Module):
         #     else:
         #         out["pred"] = self.semantic_inference(out["pred_masks"], self.seen_idx, 0.1)
         #     return out["pred"] 
-                         
+        
         return out
 
 

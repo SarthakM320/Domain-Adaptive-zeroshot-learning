@@ -4,3 +4,4 @@ cityscapes_dataset
 RN101.pt
 RN50.pt
 ViT-B-16.pt
+.DS_Store

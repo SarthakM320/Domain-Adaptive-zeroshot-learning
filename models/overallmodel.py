@@ -17,7 +17,7 @@ class OverallModel(nn.Module):
         base_class,
         novel_class,
         both_class,
-        gpu_id,
+        device,
         training = False,
         self_training = False,
         load_text_embedding = None,
@@ -29,23 +29,25 @@ class OverallModel(nn.Module):
         self.decode_head = decode_head
         self.unet_decoder = unet_decoder
         # self.class_names = class_names
-        self.class_names = ['dog', 'cat']
+        self.class_names = class_names
         self.base_class = np.asarray(base_class)
         self.novel_class = np.asarray(novel_class)
         self.both_class = np.asarray(both_class)
         self.self_training = self_training
         self.load_text_embedding = load_text_embedding
         self.training = training
-        self.gpu_id = gpu_id
+        self.device = device
 
         if not self.load_text_embedding:
-            self.texts = torch.cat([tokenize(f"a photo of a {c}") for c in self.class_names]).to(gpu_id)
+            self.texts = torch.cat([tokenize(f"a photo of a {c}") for c in self.class_names]).to(device)
         # TODO write the else part
         
+        self.conv = nn.Conv2d(3,3, kernel_size = 1, stride = 1, padding = 0)
         
 
 
     def forward(self, image_b1, image_b2):
+        b,c,h,w = image_b1.shape
         b1_resnet_features = self.clip_resnet.get_features(image_b1)
         b2_resnet_features = self.clip_resnet.get_features(image_b2)
         b1_stylized = stylize(b1_resnet_features, b2_resnet_features)
@@ -53,24 +55,15 @@ class OverallModel(nn.Module):
         
         # pass b1_stylized to unet_decoder
         # which feature map to get from the middle
-        b1_seg = self.unet_decoder(b1_stylized)
+        b1_seg, b1_l = self.unet_decoder(b1_stylized)
 
         text_features = self.get_text_embeddings(self.texts)
         #which image to pass b1 or b2
         image_features = self.get_image_features(image_b1, model = 'vit')
-
-        # if self.gpu_id == 0:
-        #     print(b1_seg.shape)
-        #     print(text_features.shape)
-        #     print(len(image_features))
-        #     for i in image_features:
-        #         if isinstance(i, tuple):
-        #             print(len(i))
-        #             for j in i:
-        #                 print(f'tuple {print(j.shape)}')
-        #         else:
-        #             print(f'{i.shape}')
-        #     print('done')
+        feature_l = self.conv(image_features[0][0].reshape(b,c,h,w))
+        seg = self.decode_head([image_features, text_features])
+        
+        return b1_seg, b1_l, feature_l, seg
 
 
 

@@ -50,6 +50,8 @@ class CLIPResNet(nn.Module):
 
         if self.pretrained:
             self.init_weights()
+            freeze_stages(self)
+            
 
     def _make_layer(self, planes, blocks, stride=1):
         layers = [Bottleneck(self._inplanes, planes, stride)]

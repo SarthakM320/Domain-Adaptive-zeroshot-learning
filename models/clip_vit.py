@@ -31,6 +31,7 @@ class CLIPVisionTransformer(nn.Module):
 
         if self.pretrained:
             self.init_weights()
+            freeze_stages(self)
 
     def init_weights(self, pretrained=None):
         pretrained = pretrained or self.pretrained
@@ -84,7 +85,7 @@ class CLIPVisionTransformer(nn.Module):
         outs = []
         for i, blk in enumerate(self.transformer.resblocks):
             x = blk(x)
-            if len(self.out_indices) > 1:
+            if len(self.out_indices) > 0:
                 if i in self.out_indices:
                     xp = x.permute(1, 0, 2)[:, 1:, :].permute(0, 2, 1).reshape(B, -1, H, W)
                     features.append(xp.contiguous())

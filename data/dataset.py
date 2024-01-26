@@ -1,9 +1,8 @@
-from .utils_own import transforms_cityscape, target_transforms_cityscape
 import torchvision
+from torchvision import transforms
 from torch.utils.data import Dataset
 import pandas as pd
 from PIL import Image
-from data import labels
 import torch
 # cityscapes_train = torchvision.datasets.Cityscapes(
 #                             root = 'cityscapes_dataset',
@@ -38,22 +37,40 @@ import torch
 # read the cityscan paper to look for certsain points
 # try to find the mask values
 
+def _convert_image_to_rgb(image):
+    return image.convert("RGB")
+
+def get_transforms(image_size):
+    transform = transforms.Compose([
+        transforms.Resize((image_size,image_size)),
+        _convert_image_to_rgb,
+        transforms.ToTensor(),
+        # transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+    ])
+
+    target_transforms = transforms.Compose([
+        transforms.Resize((image_size,image_size)),
+        transforms.ToTensor(),
+        # transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+    ])
+    return transform, target_transforms
+
 class dataset(Dataset):
     def __init__(
         self,
         csv_file, 
+        image_size, 
+        color_mapping,
         kaggle,
-        transforms = transforms_cityscape,
-        target_transforms = target_transforms_cityscape
     ):
         csv = pd.read_csv(csv_file)
         self.kaggle = kaggle
         self.images = csv['image'].values
         self.foggy_images = csv['foggy_image'].values
         self.gts = csv['target'].values
-        self.transforms = transforms
-        self.target_transforms = target_transforms
-        self.color_mapping = {label.color:label.id for label in labels.labels}
+        self.transforms, self.target_transforms = get_transforms(image_size)
+        self.color_mapping = color_mapping
+        self.image_size = image_size
 
     def __len__(self):
         return len(self.images)
@@ -69,7 +86,7 @@ class dataset(Dataset):
             gt = self.target_transforms('/kaggle/input/cityscapes-dataset/'+Image.open(self.gts[idx].replace('\\','/')))[:3]
 
         gt_255 = (gt*255).to(torch.int)
-        x = torch.zeros(34,512,512)
+        x = torch.zeros(26,self.image_size, self.image_size)
         for i in range(gt.shape[1]):
             for j in range(gt.shape[1]):
                 try:
@@ -80,4 +97,4 @@ class dataset(Dataset):
                     x[0,i,j] = 255
 
 
-        return image, foggy_image, x
+        return image, foggy_image, x/255
