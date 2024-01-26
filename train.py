@@ -163,8 +163,8 @@ def main(args):
 
     loss_bce = nn.BCELoss()
 
-    # if args['use_gpu']:
-    #     model = DDP(model.to(device), device_ids = [gpu_id])
+    if args['use_gpu']:
+        model = DDP(model.to(device), device_ids = [gpu_id])
     model.to(device)
 
     # b1_seg, b1_l, feature_l, seg = model(torch.randn(1,3,512,512).to(device),torch.randn(1,3,512,512).to(device))
