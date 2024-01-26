@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from clip import tokenize
 import numpy as np
+from torch.nn import functional as F
 from models import *
 
 
@@ -62,6 +63,7 @@ class OverallModel(nn.Module):
         image_features = self.get_image_features(image_b1, model = 'vit')
         feature_l = self.conv(image_features[0][0].reshape(b,c,h,w))
         seg = self.decode_head([image_features, text_features])
+        seg = F.sigmoid(seg)
         
         return b1_seg, b1_l, feature_l, seg
 
