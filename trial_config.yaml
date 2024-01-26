@@ -6,6 +6,7 @@ optim: Adam
 num_classes: 26
 img_size: 512
 seed: 16
+batch_size: 4
 use_gpu: False
 kaggle: False
 mac: True
