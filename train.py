@@ -191,14 +191,16 @@ def main(args):
             seg['pred_masks'] = (seg['pred_masks']>args['threshold']).int()
             iou, _ = intersection_over_union(seg['pred_masks'], gt.int())
             prec, _, recall, _ = precision_and_recall(seg['pred_masks'], gt.int())
-            dice = dice_score(seg['pred_masks'], gt.int())
+            dice,_ = dice_score(seg['pred_masks'], gt.int())
 
-            print(f'PRECISION: {prec}')
-            print(f'RECALL: {recall}')
-            print(f'IOU: {iou}')
-            print(f'DICE SCORE: {dice}')
+            if idx%10 == 0:
 
-            print(f'LOSS: {loss}')
+                print(f'PRECISION: {prec}')
+                print(f'RECALL: {recall}')
+                print(f'IOU: {iou}')
+                print(f'DICE SCORE: {dice}')
+
+                print(f'LOSS: {loss}')
 
 
 
