@@ -106,7 +106,7 @@ class dataset(Dataset):
             gt = Image.open('/kaggle/input/cityscapes-dataset/'+self.gts[idx].replace('\\','/'))
 
         im = np.array(transforms.Resize((self.image_size,self.image_size))(gt))
-        print(im.shape)
+        
         mask = np.zeros((self.num_classes,512,512))
 
         for k in mapping_20:
