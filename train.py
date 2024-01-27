@@ -198,7 +198,10 @@ def main(args):
             # what should the threshold be
             
             loss_cos = (1-cos(b1_l.flatten(-2), feature_l.flatten(-2))).mean()*args['cos_loss_weight']
-            loss_b1_seg = loss_bce(b1_seg, seg['pred_masks'])*args['b1_seg_loss_weight']
+            loss_b1_seg = loss_bce(
+                b1_seg, 
+                seg['pred_masks'].softmax(dim=1).argmax(dim = 1)
+            )*args['b1_seg_loss_weight']   
             loss_seg = loss_bce(seg['pred_masks'], gt)*args['seg_loss_weight']
             loss = loss_b1_seg + loss_seg + loss_cos
             # loss = loss_bce(seg['pred_masks'], gt)
@@ -284,7 +287,10 @@ def main(args):
                 b1_seg, b1_l, feature_l, seg = model(b1, b2)
                 # what should the threshold be
                 loss_cos = (1-cos(b1_l.flatten(-2), feature_l.flatten(-2))).mean()*args['cos_loss_weight']
-                loss_b1_seg = loss_bce(b1_seg, seg['pred_masks'])*args['b1_seg_loss_weight']
+                loss_b1_seg = loss_bce(
+                    b1_seg, 
+                    seg['pred_masks'].softmax(dim=1).argmax(dim = 1)
+                )*args['b1_seg_loss_weight']
                 loss_seg = loss_bce(seg['pred_masks'], gt)*args['seg_loss_weight']
                 loss = loss_b1_seg + loss_seg + Loss_cos
                 precision_seg = []
