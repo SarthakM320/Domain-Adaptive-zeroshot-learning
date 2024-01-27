@@ -61,12 +61,19 @@ def get_transforms(image_size):
     #     mask = transforms.ToTensor()(mask).permute(1,2,0)
     #     return mask
 
-    # target_transforms = transforms.Compose([
-    #     transforms.Resize((image_size,image_size)),
-    #     transforms.ToTensor(),
-    #     # transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
-    # ])
-    return transform
+    target_transforms = transforms.Compose([
+        transforms.Resize((image_size,image_size)),
+        transforms.ToTensor(),
+        # transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+    ])
+    return transform, target_transforms
+
+def map(num):
+    # print(f'{num}:{mapping_20.get(int(num))}')
+    return mapping_20.get(int(num))
+
+
+
 
 class dataset(Dataset):
     def __init__(
@@ -81,7 +88,7 @@ class dataset(Dataset):
         self.images = csv['image'].values
         self.foggy_images = csv['foggy_image'].values
         self.gts = csv['target'].values
-        self.transforms = get_transforms(image_size)
+        self.transforms, self.target_transforms = get_transforms(image_size)
         self.num_classes = num_classes
         self.image_size = image_size
 
@@ -98,13 +105,12 @@ class dataset(Dataset):
             foggy_image = self.transforms(Image.open('/kaggle/input/cityscapes-dataset/'+self.foggy_images[idx].replace('\\','/')))
             gt = Image.open('/kaggle/input/cityscapes-dataset/'+self.gts[idx].replace('\\','/'))
 
-        gt = np.array(transforms.Resize((self.image_size,self.image_size))(gt))
+        im = np.array(transforms.Resize((self.image_size,self.image_size))(gt))[0]
         mask = np.zeros((self.num_classes,512,512))
 
         for k in mapping_20:
-            mask[mapping_20[k]][gt == k] = 1
+            mask[mapping_20[k]][im == k] = 1
 
         mask = transforms.ToTensor()(mask).permute(1,2,0)
 
-        return image, foggy_image, mask.to(torch.float32)
-        # return image, foggy_image, x/255
+        return image, foggy_image, (self.target_transforms(gt)[0]*255).apply_(map), mask

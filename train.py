@@ -168,7 +168,8 @@ def main(args):
         device = device
     )
 
-    loss_bce = nn.BCELoss()
+    # loss_bce = nn.BCELoss()
+    loss_bce = nn.CrossEntropyLoss()
     cos = nn.CosineSimilarity(dim = -1)
 
     if args['use_gpu']:
@@ -186,12 +187,12 @@ def main(args):
     for epoch in range(num_epochs):
 
         model.train()
-        for idx, (b1,b2,gt) in enumerate(tqdm(train_dataloader)):
+        for idx, (b1,b2,gt,mask) in enumerate(tqdm(train_dataloader)):
 
             
             b1 = b1.to(device)
             b2 = b2.to(device)
-            gt = gt.to(device)
+            gt = gt.to(device).to(torch.int)
 
             b1_seg, b1_l, feature_l, seg = model(b1, b2)
             # what should the threshold be
@@ -211,9 +212,10 @@ def main(args):
             recall_seg = []
             iou_seg = []
             acc_seg = []
-
+            
+            seg = seg['pred_masks'].softmax(dim=1).cpu()
             for i in range(len(class_names)):
-                acc,recall,prec,iou = IOU(gt[:,i,:,:], seg['pred_masks'].softmax(dim=1)[:,i,:,:])
+                acc,recall,prec,iou = IOU(mask[:,i,:,:], seg[:,i,:,:])
                 precision_seg.append(prec)
                 recall_seg.append(recall)
                 acc_seg.append(acc)
@@ -224,8 +226,9 @@ def main(args):
             iou_b1_seg = []
             acc_b1_seg = []
 
+            b1_seg_softmax = b1_seg.softmax(dim=1).cpu()
             for i in range(len(class_names)):
-                acc,recall,prec,iou = IOU(gt[:,i,:,:], b1_seg.softmax(dim=1)[:,i,:,:])
+                acc,recall,prec,iou = IOU(mask[:,i,:,:], b1_seg_softmax[:,i,:,:])
                 precision_b1_seg.append(prec)
                 recall_b1_seg.append(recall)
                 acc_b1_seg.append(acc)
@@ -272,7 +275,7 @@ def main(args):
 
         model.eval()
         running_iou_mean = []
-        for idx, (b1,b2,gt) in enumerate(tqdm(val_dataloader)):
+        for idx, (b1,b2,gt,mask) in enumerate(tqdm(val_dataloader)):
             b1 = b1.to(device)
             b2 = b2.to(device)
             gt = gt.to(device)
@@ -289,8 +292,10 @@ def main(args):
                 iou_seg = []
                 acc_seg = []
 
+                seg = seg['pred_masks'].softmax(dim=1).cpu()
+
                 for i in range(len(class_names)):
-                    acc,recall,prec,iou = IOU(gt[:,i,:,:], seg['pred_masks'].softmax(dim=1)[:,i,:,:])
+                    acc,recall,prec,iou = IOU(mask[:,i,:,:], seg[:,i,:,:])
                     precision_seg.append(prec)
                     recall_seg.append(recall)
                     acc_seg.append(acc)
@@ -301,8 +306,9 @@ def main(args):
                 iou_b1_seg = []
                 acc_b1_seg = []
 
+                b1_seg_softmax = b1_seg.softmax(dim=1).cpu()
                 for i in range(len(class_names)):
-                    acc,recall,prec,iou = IOU(gt[:,i,:,:], b1_seg.softmax(dim=1)[:,i,:,:])
+                    acc,recall,prec,iou = IOU(mask[:,i,:,:], b1_seg_softmax[:,i,:,:])
                     precision_b1_seg.append(prec)
                     recall_b1_seg.append(recall)
                     acc_b1_seg.append(acc)
