@@ -3,7 +3,7 @@ folder: Experiments
 num_epochs: 30
 lr: 0.001
 optim: Adam
-num_classes: 26
+num_classes: 20
 img_size: 512
 seed: 16
 batch_size: 4
@@ -15,7 +15,7 @@ b1_seg_loss_weight: 1
 seg_loss_weight: 1
 cos_loss_weight: 1
 
-threshold: 0.5
+threshold: 0.7
 
 text_encoder:
   freeze: True

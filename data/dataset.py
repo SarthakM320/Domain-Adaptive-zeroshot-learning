@@ -4,6 +4,9 @@ from torch.utils.data import Dataset
 import pandas as pd
 from PIL import Image
 import torch
+from .cityscapes_labels import mapping_20
+import numpy as np
+
 # cityscapes_train = torchvision.datasets.Cityscapes(
 #                             root = 'cityscapes_dataset',
 #                             split='train', 
@@ -48,19 +51,29 @@ def get_transforms(image_size):
         # transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
     ])
 
-    target_transforms = transforms.Compose([
-        transforms.Resize((image_size,image_size)),
-        transforms.ToTensor(),
-        # transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
-    ])
-    return transform, target_transforms
+    # def target_transforms(image, image_size, num_classes):
+    #     image = np.array(transforms.Resize((image_size,image_size))(image))
+    #     mask = np.zeros((num_classes,512,512))
+
+    #     for k in mapping_20:
+    #         mask[mapping_20[k]][image == k] = 1
+
+    #     mask = transforms.ToTensor()(mask).permute(1,2,0)
+    #     return mask
+
+    # target_transforms = transforms.Compose([
+    #     transforms.Resize((image_size,image_size)),
+    #     transforms.ToTensor(),
+    #     # transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+    # ])
+    return transform
 
 class dataset(Dataset):
     def __init__(
         self,
         csv_file, 
         image_size, 
-        color_mapping,
+        num_classes,
         kaggle,
     ):
         csv = pd.read_csv(csv_file)
@@ -68,8 +81,8 @@ class dataset(Dataset):
         self.images = csv['image'].values
         self.foggy_images = csv['foggy_image'].values
         self.gts = csv['target'].values
-        self.transforms, self.target_transforms = get_transforms(image_size)
-        self.color_mapping = color_mapping
+        self.transforms = get_transforms(image_size)
+        self.num_classes = num_classes
         self.image_size = image_size
 
     def __len__(self):
@@ -79,25 +92,19 @@ class dataset(Dataset):
         if not self.kaggle:
             image = self.transforms(Image.open(self.images[idx].replace('\\','/')))
             foggy_image = self.transforms(Image.open(self.foggy_images[idx].replace('\\','/')))
-            gt = self.target_transforms(Image.open(self.gts[idx].replace('\\','/')))[:3]
+            gt = Image.open(self.gts[idx].replace('\\','/'))
         else:
             image = self.transforms(Image.open('/kaggle/input/cityscapes-dataset/'+self.images[idx].replace('\\','/')))
             foggy_image = self.transforms(Image.open('/kaggle/input/cityscapes-dataset/'+self.foggy_images[idx].replace('\\','/')))
-            gt = self.target_transforms(Image.open('/kaggle/input/cityscapes-dataset/'+self.gts[idx].replace('\\','/')))[:3]
+            gt = Image.open('/kaggle/input/cityscapes-dataset/'+self.gts[idx].replace('\\','/'))
 
-        gt_255 = (gt*255).to(torch.int)
-        x = torch.zeros(26,self.image_size, self.image_size)
-        for i in range(gt.shape[1]):
-            for j in range(gt.shape[1]):
-                try:
-                    color = tuple(gt_255[:,i,j].numpy())
-                    id = self.color_mapping[color]
-                    x[id,i,j] = 255
-                except:
-                    x[0,i,j] = 255
+        image = np.array(transforms.Resize((self.image_size,self.image_size))(gt))
+        mask = np.zeros((self.num_classes,512,512))
 
-        del gt_255
-        del gt
+        for k in mapping_20:
+            mask[mapping_20[k]][image == k] = 1
 
+        mask = transforms.ToTensor()(mask).permute(1,2,0)
 
-        return image, foggy_image, x/255
+        return image, foggy_image, mask
+        # return image, foggy_image, x/255
