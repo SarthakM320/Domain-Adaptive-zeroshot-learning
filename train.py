@@ -214,7 +214,7 @@ def main(args):
 
             for i in range(len(class_names)):
                 acc,recall,prec,iou = IOU(gt[:,i,:,:], seg['pred_masks'].softmax(dim=1)[:,i,:,:])
-                precision_seg.append(precision)
+                precision_seg.append(prec)
                 recall_seg.append(recall)
                 acc_seg.append(acc)
                 iou_seg.append(iou)
@@ -226,7 +226,7 @@ def main(args):
 
             for i in range(len(class_names)):
                 acc,recall,prec,iou = IOU(gt[:,i,:,:], b1_seg.softmax(dim=1)[:,i,:,:])
-                precision_b1_seg.append(precision)
+                precision_b1_seg.append(prec)
                 recall_b1_seg.append(recall)
                 acc_b1_seg.append(acc)
                 iou_b1_seg.append(iou)
@@ -291,7 +291,7 @@ def main(args):
 
                 for i in range(len(class_names)):
                     acc,recall,prec,iou = IOU(gt[:,i,:,:], seg['pred_masks'].softmax(dim=1)[:,i,:,:])
-                    precision_seg.append(precision)
+                    precision_seg.append(prec)
                     recall_seg.append(recall)
                     acc_seg.append(acc)
                     iou_seg.append(iou)
@@ -303,7 +303,7 @@ def main(args):
 
                 for i in range(len(class_names)):
                     acc,recall,prec,iou = IOU(gt[:,i,:,:], b1_seg.softmax(dim=1)[:,i,:,:])
-                    precision_b1_seg.append(precision)
+                    precision_b1_seg.append(prec)
                     recall_b1_seg.append(recall)
                     acc_b1_seg.append(acc)
                     iou_b1_seg.append(iou)
