@@ -292,7 +292,7 @@ def main(args):
                     seg['pred_masks'].softmax(dim=1).argmax(dim = 1)
                 )*args['b1_seg_loss_weight']
                 loss_seg = loss_bce(seg['pred_masks'], gt)*args['seg_loss_weight']
-                loss = loss_b1_seg + loss_seg + Loss_cos
+                loss = loss_b1_seg + loss_seg + loss_cos
                 precision_seg = []
                 recall_seg = []
                 iou_seg = []
@@ -320,7 +320,7 @@ def main(args):
                     acc_b1_seg.append(acc)
                     iou_b1_seg.append(iou)
 
-                
+                running_iou_mean.append(np.mean(iou_seg))
                 if idx%2 == 0 and gpu_id == 0:
                     writer.add_scalar('Overall Loss/val', loss.item(), step_val)
                     writer.add_scalar('Loss_cos/val', loss_cos.item(), step_val)

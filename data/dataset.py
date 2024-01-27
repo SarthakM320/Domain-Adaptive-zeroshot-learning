@@ -105,12 +105,13 @@ class dataset(Dataset):
             foggy_image = self.transforms(Image.open('/kaggle/input/cityscapes-dataset/'+self.foggy_images[idx].replace('\\','/')))
             gt = Image.open('/kaggle/input/cityscapes-dataset/'+self.gts[idx].replace('\\','/'))
 
-        im = np.array(transforms.Resize((self.image_size,self.image_size))(gt))[0]
+        im = np.array(transforms.Resize((self.image_size,self.image_size))(gt))
+        print(im.shape)
         mask = np.zeros((self.num_classes,512,512))
 
         for k in mapping_20:
             mask[mapping_20[k]][im == k] = 1
 
-        mask = transforms.ToTensor()(mask).permute(1,2,0)
+        mask = torch.Tensor(mask)
 
         return image, foggy_image, (self.target_transforms(gt)[0]*255).apply_(map), mask
