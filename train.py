@@ -62,15 +62,13 @@ def main(args):
         'dataset/cityscape_train.csv', 
         image_size = args['img_size'],
         color_mapping=color_mapping,
-        kaggle = args['kaggle'],
-        device = device
+        kaggle = args['kaggle']
     )
     val_dataset = dataset(
         'dataset/cityscape_val.csv', 
         image_size = args['img_size'] ,  
         color_mapping=color_mapping, 
-        kaggle = args['kaggle'],
-        device = device
+        kaggle = args['kaggle']
     )
 
     if args['use_gpu']:
@@ -79,7 +77,7 @@ def main(args):
     else:
         train_sampler = val_sampler = None
 
-    train_dataloader = DataLoader(train_dataset, batch_size=args['batch_size'], num_workers = 8,shuffle=train_sampler is None, sampler=train_sampler)
+    train_dataloader = DataLoader(train_dataset, batch_size=args['batch_size'], num_workers = 16,shuffle=train_sampler is None, sampler=train_sampler, pin_memory = True)
     val_dataloader = DataLoader(val_dataset, batch_size=8, num_workers = 8,shuffle=val_sampler is None, sampler = val_sampler)
 
     exp=f'{args["folder"]}/'+args['exp_name']
@@ -187,9 +185,15 @@ def main(args):
 
         model.train()
         for idx, (b1,b2,gt) in enumerate(tqdm(train_dataloader)):
-            # b1 = b1.to(device)
-            # b2 = b2.to(device)
-            # gt = gt.to(device)
+
+            if args['use_gpu']:
+                b1 = b1.cuda(gpu_id, non_blocking=True)
+                b2 = b2.cuda(gpu_id, non_blocking=True)
+                gt = gt.cuda(gpu_id, non_blocking=True)
+            else:
+                b1 = b1.to(device)
+                b2 = b2.to(device)
+                gt = gt.to(device)
 
             b1_seg, b1_l, feature_l, seg = model(b1, b2)
             # what should the threshold be
@@ -259,9 +263,9 @@ def main(args):
         model.eval()
         running_iou_mean = []
         for idx, (b1,b2,gt) in enumerate(tqdm(val_dataloader)):
-            # b1 = b1.to(device)
-            # b2 = b2.to(device)
-            # gt = gt.to(device)
+            b1 = b1.to(device)
+            b2 = b2.to(device)
+            gt = gt.to(device)
 
             with torch.no_grad():
                 b1_seg, b1_l, feature_l, seg = model(b1, b2)

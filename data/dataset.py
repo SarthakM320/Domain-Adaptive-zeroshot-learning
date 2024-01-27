@@ -62,7 +62,6 @@ class dataset(Dataset):
         image_size, 
         color_mapping,
         kaggle,
-        device
     ):
         csv = pd.read_csv(csv_file)
         self.kaggle = kaggle
@@ -72,7 +71,6 @@ class dataset(Dataset):
         self.transforms, self.target_transforms = get_transforms(image_size)
         self.color_mapping = color_mapping
         self.image_size = image_size
-        self.device = device
 
     def __len__(self):
         return len(self.images)
@@ -83,12 +81,12 @@ class dataset(Dataset):
             foggy_image = self.transforms(Image.open(self.foggy_images[idx].replace('\\','/')))
             gt = self.target_transforms(Image.open(self.gts[idx].replace('\\','/')))[:3]
         else:
-            image = self.transforms(Image.open('/kaggle/input/cityscapes-dataset/'+self.images[idx].replace('\\','/'))).to(self.device)
-            foggy_image = self.transforms(Image.open('/kaggle/input/cityscapes-dataset/'+self.foggy_images[idx].replace('\\','/'))).to(self.device)
+            image = self.transforms(Image.open('/kaggle/input/cityscapes-dataset/'+self.images[idx].replace('\\','/')))
+            foggy_image = self.transforms(Image.open('/kaggle/input/cityscapes-dataset/'+self.foggy_images[idx].replace('\\','/')))
             gt = self.target_transforms(Image.open('/kaggle/input/cityscapes-dataset/'+self.gts[idx].replace('\\','/')))[:3]
 
-        gt_255 = (gt*255).to(torch.int).to(self.device)
-        x = torch.zeros(26,self.image_size, self.image_size).to(self.device)
+        gt_255 = (gt*255).to(torch.int)
+        x = torch.zeros(26,self.image_size, self.image_size)
         for i in range(gt.shape[1]):
             for j in range(gt.shape[1]):
                 try:
