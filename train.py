@@ -77,8 +77,8 @@ def main(args):
     else:
         train_sampler = val_sampler = None
 
-    train_dataloader = DataLoader(train_dataset, batch_size=args['batch_size'], shuffle=train_sampler is None, sampler=train_sampler)
-    val_dataloader = DataLoader(val_dataset, batch_size=8, shuffle=val_sampler is None, sampler = val_sampler)
+    train_dataloader = DataLoader(train_dataset, batch_size=args['batch_size'], num_workers = 8,shuffle=train_sampler is None, sampler=train_sampler)
+    val_dataloader = DataLoader(val_dataset, batch_size=8, num_workers = 8,shuffle=val_sampler is None, sampler = val_sampler)
 
     exp=f'{args["folder"]}/'+args['exp_name']
     if gpu_id == 0:
