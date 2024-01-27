@@ -149,7 +149,7 @@ def main(args):
 
     class_names = ['void']
     for label in labels:
-        if not label.id == 0:
+        if not label.id == 0 and not label.ignoreInEval:
             class_names.append(label.name)
 
     
