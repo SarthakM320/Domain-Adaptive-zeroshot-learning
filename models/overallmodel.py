@@ -64,8 +64,8 @@ class OverallModel(nn.Module):
         feature_l = self.conv(image_features[0][0].reshape(b,c,h,w))
         seg = self.decode_head([image_features, text_features])
 
-        b1_seg = F.sigmoid(b1_seg)
-        seg['pred_masks'] = F.sigmoid(seg['pred_masks'])
+        # b1_seg = F.sigmoid(b1_seg)
+        # seg['pred_masks'] = F.sigmoid(seg['pred_masks'])
         return b1_seg, b1_l, feature_l, seg
 
     def forward_test(self, image_b2):

@@ -15,7 +15,7 @@ b1_seg_loss_weight: 1
 seg_loss_weight: 1
 cos_loss_weight: 1
 
-threshold: 0.7
+threshold: 0.5
 
 text_encoder:
   freeze: True

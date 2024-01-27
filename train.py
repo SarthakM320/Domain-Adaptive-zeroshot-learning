@@ -19,7 +19,7 @@ from torch.distributed import init_process_group, destroy_process_group
 import os
 import yaml
 from data import dataset, labels
-from metrics import dice_score, precision_and_recall, intersection_over_union
+from metrics import dice_score, precision_and_recall, intersection_over_union, IoU
 
 warnings.filterwarnings('ignore')
 
@@ -92,6 +92,8 @@ def main(args):
         builtins.print = print_pass
 
     num_epochs = args['num_epochs']
+
+    IOU = IoU(args['threshold'])
 
     models = {}
     models['image_encoder'] = CLIPVisionTransformer(
@@ -180,6 +182,7 @@ def main(args):
     step_train = 0
     step_val = 0
     best_iou = 0
+    running_iou_train_mean = []
     for epoch in range(num_epochs):
 
         model.train()
@@ -193,7 +196,7 @@ def main(args):
             b1_seg, b1_l, feature_l, seg = model(b1, b2)
             # what should the threshold be
             
-            loss_cos = (1-cos(b1_l.flatten(-2), feature_l.flatten(-2))).mean()*args['cos_loss_weight']
+            loss_cos = (1-cos(b1_l.flatten(-2), feature_l.flatten(-2))).np.mean()*args['cos_loss_weight']
             loss_b1_seg = loss_bce(b1_seg, seg['pred_masks'])*args['b1_seg_loss_weight']
             loss_seg = loss_bce(seg['pred_masks'], gt)*args['seg_loss_weight']
             loss = loss_b1_seg + loss_seg + loss_cos
@@ -204,51 +207,63 @@ def main(args):
             loss.backward()
             optim.step()
 
-            # b1_seg = (b1_seg>args['threshold']).int()
-            # seg['pred_masks'] = (seg['pred_masks']>args['threshold']).int()
-            iou, iou_per_class = intersection_over_union((seg['pred_masks']>args['threshold']).int().detach().cpu(), gt.int().detach().cpu())
-            prec, precision_per_class, recall, recall_per_class = precision_and_recall((seg['pred_masks']>args['threshold']).int().detach().cpu(), gt.int().detach().cpu())
-            dice, dice_per_class = dice_score((seg['pred_masks']>args['threshold']).int().detach().cpu(), gt.int().detach().cpu())
-            
-            iou_b1_seg, iou_per_class_b1_seg = intersection_over_union((b1_seg>args['threshold']).int().detach().cpu(), gt.int().detach().cpu())
-            prec_b1_seg, precision_per_class_b1_seg, recall_b1_seg, recall_per_class_b1_seg = precision_and_recall((b1_seg>args['threshold']).int().detach().cpu(), gt.int().detach().cpu())
-            dice_b1_seg, dice_per_class_b1_seg = dice_score((b1_seg>args['threshold']).int().detach().cpu(), gt.int().detach().cpu())
-            
+            precision_seg = []
+            recall_seg = []
+            iou_seg = []
+            acc_seg = []
+
+            for i in range(len(class_names)):
+                acc,recall,prec,iou = IOU(gt[:,i,:,:], seg['pred_masks'].softmax(dim=1)[:,i,:,:])
+                precision_seg.append(precision)
+                recall_seg.append(recall)
+                acc_seg.append(acc)
+                iou_seg.append(iou)
+
+            precision_b1_seg = []
+            recall_b1_seg = []
+            iou_b1_seg = []
+            acc_b1_seg = []
+
+            for i in range(len(class_names)):
+                acc,recall,prec,iou = IOU(gt[:,i,:,:], b1_seg.softmax(dim=1)[:,i,:,:])
+                precision_b1_seg.append(precision)
+                recall_b1_seg.append(recall)
+                acc_b1_seg.append(acc)
+                iou_b1_seg.append(iou)
+
+            running_iou_train_mean.append(np.mean(iou_seg))
             if idx%2 == 0 and gpu_id == 0:
                 writer.add_scalar('Overall Loss/train', loss.item(), step_train)
                 writer.add_scalar('Loss_cos/train', loss_cos.item(), step_train)
                 writer.add_scalar('Loss_b1_seg/train', loss_b1_seg.item(), step_train)
                 writer.add_scalar('Loss_seg/train', loss_seg.item(), step_train)
-                writer.add_scalar('Mean IOU/train', iou.item(), step_train)
-                writer.add_scalar('Mean Precision/train', prec.item(), step_train)
-                writer.add_scalar('Mean Recall/train', recall.item(), step_train)
-                writer.add_scalar('Mean Dice/train', dice.item(), step_train)
+                writer.add_scalar('Mean IOU/train', np.mean(iou_seg), step_train)
+                writer.add_scalar('Mean Precision/train', np.mean(precision_seg), step_train)
+                writer.add_scalar('Mean Recall/train', np.mean(recall_seg), step_train)
+                writer.add_scalar('Mean Acc/train', np.mean(acc_seg), step_train)
                     
-                writer.add_scalar('Mean IOU B1 seg/train', iou_b1_seg.item(), step_train)
-                writer.add_scalar('Mean Precision B1 seg/train', prec_b1_seg.item(), step_train)
-                writer.add_scalar('Mean Recall B1 seg/train', recall_b1_seg.item(), step_train)
-                writer.add_scalar('Mean Dice B1 seg/train', dice_b1_seg.item(), step_train)
+                writer.add_scalar('Mean IOU B1 Seg/train', np.mean(iou_b1_seg), step_train)
+                writer.add_scalar('Mean Precision B1 Seg/train', np.mean(precision_b1_seg), step_train)
+                writer.add_scalar('Mean Recall B1 Seg/train', np.mean(recall_b1_seg), step_train)
+                writer.add_scalar('Mean Acc B1 Seg/train', np.mean(acc_b1_seg), step_train)
 
-                for i in range(1,len(class_names)):
-                    writer.add_scalar(f'IOU_train/{i}', iou_per_class[: i].mean().item(), step_train)
-                    writer.add_scalar(f'Precision_train/{i}', precision_per_class[: i].mean().item(), step_train)
-                    writer.add_scalar(f'Recall_train/{i}', recall_per_class[: i].mean().item(), step_train)
-                    writer.add_scalar(f'Dice_train/{i}', dice_per_class[: i].mean().item(), step_train)
+                for i in range(len(class_names)):
+                    writer.add_scalar(f'IOU_train/{i}', iou_seg[i], step_train)
+                    writer.add_scalar(f'Precision_train/{i}', precision_seg[i], step_train)
+                    writer.add_scalar(f'Recall_train/{i}', recall_seg[i], step_train)
+                    writer.add_scalar(f'Acc_train/{i}', acc_seg[i], step_train)
                         
-                    writer.add_scalar(f'IOU_B1_Seg_train/{i}', iou_per_class_b1_seg[: i].mean().item(), step_train)
-                    writer.add_scalar(f'Precision_B1_Seg_train/{i}', precision_per_class_b1_seg[: i].mean().item(), step_train)
-                    writer.add_scalar(f'Recall_B1_Seg_train/{i}', recall_per_class_b1_seg[: i].mean().item(), step_train)
-                    writer.add_scalar(f'Dice_B1_Seg_train/{i}', dice_per_class_b1_seg[: i].mean().item(), step_train)
+                    writer.add_scalar(f'IOU_B1_Seg_train/{i}', iou_b1_seg[i], step_train)
+                    writer.add_scalar(f'Precision_B1_Seg_train/{i}', precision_b1_seg[i], step_train)
+                    writer.add_scalar(f'Recall_B1_Seg_train/{i}', recall_b1_seg[i], step_train)
+                    writer.add_scalar(f'Dice_B1_Seg_train/{i}', acc_b1_seg[i], step_train)
 
 
-            if idx%10 == 0:
-                print(f'PRECISION: {prec}')
-                print(f'RECALL: {recall}')
-                print(f'IOU: {iou}')
-                print(f'DICE SCORE: {dice}')
-                print(f'LOSS: {loss}')
+            
 
             step_train += 1
+
+        print(f'IOU: {np.mean(running_iou_train_mean)}')
 
         if args['use_gpu']:
             model.module.save_model(exp, epoch)
@@ -268,51 +283,64 @@ def main(args):
                 loss_cos = (1-cos(b1_l.flatten(-2), feature_l.flatten(-2))).mean()*args['cos_loss_weight']
                 loss_b1_seg = loss_bce(b1_seg, seg['pred_masks'])*args['b1_seg_loss_weight']
                 loss_seg = loss_bce(seg['pred_masks'], gt)*args['seg_loss_weight']
-                loss = loss_b1_seg + loss_seg + loss_cos
-                iou, iou_per_class = intersection_over_union((seg['pred_masks']>args['threshold']).int().detach().cpu(), gt.int().detach().cpu())
-                prec, precision_per_class, recall, recall_per_class = precision_and_recall((seg['pred_masks']>args['threshold']).int().detach().cpu(), gt.int().detach().cpu())
-                dice, dice_per_class = dice_score((seg['pred_masks']>args['threshold']).int().detach().cpu(), gt.int().detach().cpu())
-                running_iou_mean.append(iou)
-                
-                iou_b1_seg, iou_per_class_b1_seg = intersection_over_union((b1_seg>args['threshold']).int().detach().cpu(), gt.int().detach().cpu())
-                prec_b1_seg, precision_per_class_b1_seg, recall_b1_seg, recall_per_class_b1_seg = precision_and_recall((b1_seg>args['threshold']).int().detach().cpu(), gt.int().detach().cpu())
-                dice_b1_seg, dice_per_class_b1_seg = dice_score((b1_seg>args['threshold']).int().detach().cpu(), gt.int().detach().cpu())
+                loss = loss_b1_seg + loss_seg + Loss_cos
+                precision_seg = []
+                recall_seg = []
+                iou_seg = []
+                acc_seg = []
 
+                for i in range(len(class_names)):
+                    acc,recall,prec,iou = IOU(gt[:,i,:,:], seg['pred_masks'].softmax(dim=1)[:,i,:,:])
+                    precision_seg.append(precision)
+                    recall_seg.append(recall)
+                    acc_seg.append(acc)
+                    iou_seg.append(iou)
+
+                precision_b1_seg = []
+                recall_b1_seg = []
+                iou_b1_seg = []
+                acc_b1_seg = []
+
+                for i in range(len(class_names)):
+                    acc,recall,prec,iou = IOU(gt[:,i,:,:], b1_seg.softmax(dim=1)[:,i,:,:])
+                    precision_b1_seg.append(precision)
+                    recall_b1_seg.append(recall)
+                    acc_b1_seg.append(acc)
+                    iou_b1_seg.append(iou)
+
+                
                 if idx%2 == 0 and gpu_id == 0:
                     writer.add_scalar('Overall Loss/val', loss.item(), step_val)
                     writer.add_scalar('Loss_cos/val', loss_cos.item(), step_val)
                     writer.add_scalar('Loss_b1_seg/val', loss_b1_seg.item(), step_val)
                     writer.add_scalar('Loss_seg/val', loss_seg.item(), step_val)
-                    writer.add_scalar('Mean IOU/val', iou.item(), step_val)
-                    writer.add_scalar('Mean Precision/val', prec.item(), step_val)
-                    writer.add_scalar('Mean Recall/val', recall.item(), step_val)
-                    writer.add_scalar('Mean Dice/val', dice.item(), step_val)
-                    
-                    writer.add_scalar('Mean IOU B1 seg/val', iou_b1_seg.item(), step_val)
-                    writer.add_scalar('Mean Precision B1 seg/val', prec_b1_seg.item(), step_val)
-                    writer.add_scalar('Mean Recall B1 seg/val', recall_b1_seg.item(), step_val)
-                    writer.add_scalar('Mean Dice B1 seg/val', dice_b1_seg.item(), step_val)
-
-                    for i in range(1,len(class_names)):
-                        writer.add_scalar(f'IOU_val/{i}', iou_per_class[: i].mean().item(), step_val)
-                        writer.add_scalar(f'Precision_val/{i}', precision_per_class[: i].mean().item(), step_val)
-                        writer.add_scalar(f'Recall_val/{i}', recall_per_class[: i].mean().item(), step_val)
-                        writer.add_scalar(f'Dice_val/{i}', dice_per_class[: i].mean().item(), step_val)
+                    writer.add_scalar('Mean IOU/val', np.mean(iou_seg), step_val)
+                    writer.add_scalar('Mean Precision/val', np.mean(precision_seg), step_val)
+                    writer.add_scalar('Mean Recall/val', np.mean(recall_seg), step_val)
+                    writer.add_scalar('Mean Acc/val', np.mean(acc_seg), step_val)
                         
-                        writer.add_scalar(f'IOU_B1_Seg_val/{i}', iou_per_class_b1_seg[: i].mean().item(), step_val)
-                        writer.add_scalar(f'Precision_B1_Seg_val/{i}', precision_per_class_b1_seg[: i].mean().item(), step_val)
-                        writer.add_scalar(f'Recall_B1_Seg_val/{i}', recall_per_class_b1_seg[: i].mean().item(), step_val)
-                        writer.add_scalar(f'Dice_B1_Seg_val/{i}', dice_per_class_b1_seg[: i].mean().item(), step_val)
+                    writer.add_scalar('Mean IOU B1 Seg/val', np.mean(iou_b1_seg), step_val)
+                    writer.add_scalar('Mean Precision B1 Seg/val', np.mean(precision_b1_seg), step_val)
+                    writer.add_scalar('Mean Recall B1 Seg/val', np.mean(recall_b1_seg), step_val)
+                    writer.add_scalar('Mean Acc B1 Seg/val', np.mean(acc_b1_seg), step_val)
 
-                if idx%10 == 0:
-                    print(f'PRECISION: {prec}')
-                    print(f'RECALL: {recall}')
-                    print(f'IOU: {iou}')
-                    print(f'DICE SCORE: {dice}')
-                    print(f'LOSS: {loss}')
+                    for i in range(len(class_names)):
+                        writer.add_scalar(f'IOU_val/{i}', iou_seg[i], step_val)
+                        writer.add_scalar(f'Precision_val/{i}', precision_seg[i], step_val)
+                        writer.add_scalar(f'Recall_val/{i}', recall_seg[i], step_val)
+                        writer.add_scalar(f'Acc_val/{i}', acc_seg[i], step_val)
+                            
+                        writer.add_scalar(f'IOU_B1_Seg_val/{i}', iou_b1_seg[i], step_val)
+                        writer.add_scalar(f'Precision_B1_Seg_val/{i}', precision_b1_seg[i], step_val)
+                        writer.add_scalar(f'Recall_B1_Seg_val/{i}', recall_b1_seg[i], step_val)
+                        writer.add_scalar(f'Dice_B1_Seg_val/{i}', acc_b1_seg[i], step_val)
+
+            
 
             
             step_val += 1
+
+        print(f'IOU: {np.mean(running_iou_mean)}')
         
         if np.mean(running_iou_mean)>best_iou:
             best_iou = np.mean(running_iou_mean)
