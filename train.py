@@ -192,7 +192,7 @@ def main(args):
             
             b1 = b1.to(device)
             b2 = b2.to(device)
-            gt = gt.to(device).to(torch.int)
+            gt = gt.type(torch.LongTensor).to(device)
 
             b1_seg, b1_l, feature_l, seg = model(b1, b2)
             # what should the threshold be
@@ -278,7 +278,7 @@ def main(args):
         for idx, (b1,b2,gt,mask) in enumerate(tqdm(val_dataloader)):
             b1 = b1.to(device)
             b2 = b2.to(device)
-            gt = gt.to(device).to(torch.int)
+            gt = gt.type(torch.LongTensor).to(device)
 
             with torch.no_grad():
                 b1_seg, b1_l, feature_l, seg = model(b1, b2)

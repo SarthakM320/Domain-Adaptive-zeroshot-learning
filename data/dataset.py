@@ -113,4 +113,4 @@ class dataset(Dataset):
 
         mask = transforms.ToTensor()(mask).permute(1,2,0)
 
-        return image, foggy_image, (self.target_transforms(gt)[0]*255).apply_(map).type(torch.LongTensor), mask
+        return image, foggy_image, (self.target_transforms(gt)[0]*255).apply_(map), mask
