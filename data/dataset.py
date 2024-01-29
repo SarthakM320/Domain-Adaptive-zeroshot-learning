@@ -115,3 +115,42 @@ class dataset(Dataset):
         mask = torch.Tensor(mask)
 
         return image, foggy_image, (self.target_transforms(gt)[0]*255).apply_(map), mask
+
+class test_dataset(Dataset):
+    def __init__(
+        self,
+        csv_file,
+        image_size, 
+        num_classes,
+        kaggle
+    ):
+        csv = pd.read_csv(csv_file)
+        self.kaggle = kaggle
+        self.images = csv['image'].values
+        self.foggy_images = csv['foggy_image'].values
+        self.gts = csv['target'].values
+        self.transforms, self.target_transforms = get_transforms(image_size)
+        self.num_classes = num_classes
+        self.image_size = image_size
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        if not self.kaggle:
+            foggy_image = self.transforms(Image.open(self.foggy_images[idx].replace('\\','/')))
+            gt = Image.open(self.gts[idx].replace('\\','/'))
+        else:
+            foggy_image = self.transforms(Image.open('/kaggle/input/cityscapes-dataset/'+self.foggy_images[idx].replace('\\','/')))
+            gt = Image.open('/kaggle/input/cityscapes-dataset/'+self.gts[idx].replace('\\','/'))
+
+        im = np.array(transforms.Resize((self.image_size,self.image_size))(gt))
+        
+        mask = np.zeros((self.num_classes,512,512))
+
+        for k in mapping_20:
+            mask[mapping_20[k]][im == k] = 1
+
+        mask = torch.Tensor(mask)
+
+        return foggy_image, (self.target_transforms(gt)[0]*255).apply_(map), mask

@@ -10,8 +10,6 @@ from tqdm import tqdm
 import json
 import warnings
 from torch.utils.tensorboard import SummaryWriter
-import numpy as np 
-import random
 import argparse
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -76,8 +74,8 @@ def main(args):
     else:
         train_sampler = val_sampler = None
 
-    train_dataloader = DataLoader(train_dataset, batch_size=args['batch_size'], num_workers = 16,shuffle=train_sampler is None, sampler=train_sampler)
-    val_dataloader = DataLoader(val_dataset, batch_size=8, num_workers = 8,shuffle=val_sampler is None, sampler = val_sampler)
+    train_dataloader = DataLoader(train_dataset, batch_size=args['batch_size'], num_workers = 4,shuffle=train_sampler is None, sampler=train_sampler)
+    val_dataloader = DataLoader(val_dataset, batch_size=8, num_workers = 4,shuffle=val_sampler is None, sampler = val_sampler)
 
     exp=f'{args["folder"]}/'+args['exp_name']
     if gpu_id == 0:
@@ -174,6 +172,14 @@ def main(args):
 
     if args['use_gpu']:
         model = DDP(model.to(device), device_ids = [device], find_unused_parameters=True)
+
+    resume_epochs = 0
+    if args['resume']:
+        if args['use_gpu']:
+            resume_epochs = model.module.load_model(exp_name)
+        else:
+            resume_epochs = model.load_model(exp_name)
+
     model.to(device)
 
     # b1_seg, b1_l, feature_l, seg = model(torch.randn(1,3,512,512).to(device),torch.randn(1,3,512,512).to(device))

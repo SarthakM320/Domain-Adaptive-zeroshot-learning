@@ -71,11 +71,14 @@ class OverallModel(nn.Module):
     def forward_test(self, image_b2):
         b,c,h,w = image_b2.shape
         b2_resnet_features = self.clip_resnet.get_features(image_b2)
+        b2_resnet_features.reverse()
         b2_seg, b2_l = self.unet_decoder(b2_resnet_features)
 
-        image_features = self.get_image_features(image_b2, model = 'vit')
-        feature_l = self.conv(image_features[0][0].reshape(b,c,h,w))
-        seg = self.decode_head([image_features, text_features])
+        # image_features = self.get_image_features(image_b2, model = 'vit')
+        # feature_l = self.conv(image_features[0][0].reshape(b,c,h,w))
+        # seg = self.decode_head([image_features, text_features])
+
+        return b2_seg
 
 
     def save_model(self, path, epoch,latest = True):
@@ -97,7 +100,7 @@ class OverallModel(nn.Module):
 
         self.unet_decoder.load_state_dict(ckpt['unet_decoder'])
         self.decode_head.load_state_dict(ckpt['seg_decoder'])
-
+        print('Model Loaded')
         return ckpt['epoch']
         
 
